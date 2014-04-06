@@ -1,23 +1,19 @@
 #!/usr/bin/env python2.7
 import subprocess 
-import sys
 import os
 import traceback
-
 import string
-import urllib2
-import httplib
-import json
+# import urllib2, httplib, json # Can get json metadata on youtube videos w/ http://gdata.youtube.com/feeds/api/videos/_7gcIbopIPk?v=2&alt=json
 
 from appscript import *
 import soundcloud
 import gntp.notifier
 
 client = soundcloud.Client(
-    client_id='*',
-    client_secret='*',
-    username='*',
-    password='*')
+    client_id='ca6a67f320837e5209d3ec705cff859b',
+    client_secret='97fa457b8cc81fac59a0677a0511373f',
+    username='andrew@schjelderup.org',
+    password='4ndr3wfr33')
 
 def shellquote(s):
     return "'" + s.replace("'", "'\\''") + "'"
@@ -31,10 +27,9 @@ def sendGrowlNotify(message,callback_url="http://youtube.com",code="200",msg_pri
         defaultNotifications = ["New Download"]
     )
     growl.register()
-
     growl.notify(
         noteType = msg_type,
-        title = "Result: %s" % message,
+        title = "%s" % message,
         description = "%s" % code,
         icon = "http://i.imgur.com/cc0OCEo.png",
         sticky = False,
@@ -49,90 +44,93 @@ def sizeof_formatter(num):
         num /= 1024.0
 
 filename=""
-error=None
-StatCode=None
-SoundCloud=False
+provider=""
 try:
-    popen = subprocess.Popen("pbpaste", stdout=subprocess.PIPE)
-    out, err = popen.communicate() 
-    process = subprocess.Popen(["youtube-dl","--max-quality","--add-metadata`","--restrict-filenames","-o","/Volumes/mav/Users/rever/Desktop/%(title)s.%(ext)s.%(id)s","--extract-audio","--audio-format","mp3","--audio-quality","0",out],stderr=subprocess.STDOUT,stdout=subprocess.PIPE)#--add-metadata
-    sendGrowlNotify("Attempting Download")
+    clipboard_process = subprocess.Popen("pbpaste", stdout=subprocess.PIPE)
+    clipboard_link, err = clipboard_process.communicate()
+
+    # Verify link being used is from soundcloud or youtube
+    if not (("youtube" in clipboard_link) or ("soundcloud" in clipboard_link)):
+        print "invalid link"
+        os._exit(0)
+
+    # Start download, max quality, safe filenames for handling below. The ID is in the filename so you can do metadata lookups for more info if wanted. Rips to mp3, might want to support native download formats, transcoding again and again lowers quality. 
+    process = subprocess.Popen(["youtube-dl","--max-quality","--add-metadata","--restrict-filenames","-o","/Volumes/mav/Users/rever/Desktop/%(title)s-%(id)s.%(ext)s","--extract-audio","--audio-format","mp3","--audio-quality","0",clipboard_link],stderr=subprocess.STDOUT,stdout=subprocess.PIPE)#--add-metadata
+    sendGrowlNotify("Downloading...")
+
     for line in process.communicate():
         if line == None:
-            error="No popen output"
-            continue
-
-        if ("[ffmpeg] Destination:" in line) or ("Post-process" in line): # It sends all of youtube-dl in single line, so I check if there is this within
-            for item in line.split("\n"):
-                if ("[ffmpeg] Destination:" in item) or ("Post-process" in item): # Then I find specific one
-                    if "Post-process" in item: # Youtube doesn't have post-processing in output.
-                        print "Probably Soundcloud"
-                        SoundCloud=True
-                        filename_org = item.split("/")[-1][:-17]
-                        filename = item.split("/")[-1][:-21]
-                        if "http" not in out:
-                            out = "http://%s" % out
-                        track = client.get('/resolve', url=out)
-                        break
-                    elif "[ffmpeg] Destination:" in item:
-                        print "Probably Youtube"
+            continue # No Popen output yet...
+        elif ("[ffmpeg] Destination:" in line) or ("Post-process" in line): # It sends all of youtube-dl in single line, so I check if there is this within
+            for item in line.split("\n"): # Iterate youtube-dl output line by line (after it finished running)
+                if ("[ffmpeg] Destination:" in item) or ("Post-process" in item): # Then I find specific one 
+                    print line
+                    if "[ffmpeg] Destination:" in item:
+                        print "Youtube or Soundcloud"
                         filename_org = item.split("/")[-1].strip()
-                        filename = item[55:-4].strip() # had [59;-4] changing to 55 it cut off armin! becausing clippin
+                        filename = item[55:-4].strip()
+
+                        print filename
+                        print filename_org
+                        break
+                    if (("Post-process" in item) and ("exists" in item) and ("soundcloud" in clipboard_link)):
+                        print "Soundcloud identified"
+                        filename_org = item.split("/")[-1].strip()
+                        filename = item[62:-4].strip()
+
+                        print filename
+                        print filename_org
                         break
                     else:
-                        filename_org = item.split("/")[-1].strip()
-                        filename = item[55:-4].strip() # had [59;-4] changing to 55 it cut off armin! becausing clippin
-                        break
+                        print "Unknown Source"
+                        sendGrowlNotify("Unknown Source")
+                        os._exit(0)
+    try:
+        if "youtube" in clipboard_link.strip():
+            provider = "Youtube"
+            print "Youtube LInkz"
+            song_id = filename.split("_")[-1]
+            filename = filename.split("_")[0:-2]
+            print "F %s" % filename
+            artist,title = filename.replace("_"," ").split("-")
+            print "Artist %s" % artist
+            print "Title %s" % title
+        elif "soundcloud" in clipboard_link.strip():
+            provider = "Soundcloud"
+            print "Soundclouds LInkz"
+            song_id = filename.split("_")[-1]
+            artist,title = filename.replace("_"," ").split("-")[0::-2]
+            print "Artist %s" % artist
+            print "Title %s" % title
+        artist,title = filename.split("-").strip()
+    except Exception, e:
+        print "Error: %s" % e
+        # Write full title-artist to both tags and figure out in iTunes
+        artist = filename.strip()
+        title = filename.strip()
 
-            break            
-        if "error" in line.lower():
-            error = line.split('\n')[-2]
-            break
-
-    if error:
-        print ('Bye, Whoops caught an error \n %s' % traceback.format_exc())
-        sys.exit(1)
-
-    elif SoundCloud:
-        artist=track.user['username']
-        title=track.title
-        if "-" in title:
-            if len(title.split("-")) > 2:
-                pass
-            else:
-                artist,title = title.split("-")
-                artist = artist.strip()
-                title = title.strip()
-    else:
-        try:
-            artist,title = filename.split("-").strip()
-        except:
-            artist = filename.strip()
-            title = filename.strip()
-
-    # Set variables and write tags below
-    full_url = out.split("/")
+    # Variables and metadata tag setting below
+    full_url = clipboard_link.split("/")
     nohttps_url = string.join(full_url[2:],"/") # Rebuild url without HTTPS (messes with comment metadata I think)
     size = sizeof_formatter(os.path.getsize(os.path.join("/Volumes/mav/Users/rever/Desktop/",filename_org)))
     
-    # "Writing id3v2 comment tags with url"
-    pro = subprocess.Popen(["id3v2","-t",title.strip(),"-a",artist.strip(),"--COMM", nohttps_url,os.path.join("/Volumes/mav/Users/rever/Desktop/",filename_org) ],stderr=subprocess.STDOUT,stdout=subprocess.PIPE)
+    # Writing id3v2 comment tags with url
+    subprocess.Popen(["id3v2","-t",title.strip(),"-a",artist.strip(),"--COMM", nohttps_url,os.path.join("/Volumes/mav/Users/rever/Desktop/",filename_org) ],stderr=subprocess.STDOUT,stdout=subprocess.PIPE)
     
-    # print "xattr edit metadata kMDItemWhereFroms"
+    # xattr edit metadata kMDItemWhereFroms
     # subprocess.call(["xattr -s com.apple.metadata:kMDItemWhereFroms youtube '%s'" % shellquote(os.path.join("/Volumes/mav/Users/rever/Desktop/",filename_org))],shell=True)
     
-    # "Mark file completed for hazel"
-    os.system("/bin/bash /Users/rever/Documents/customBashExecute/setmp3Comments.sh '%s'" % (os.path.join("/Volumes/mav/Users/rever/Desktop/",filename_org)))
-    
+    # Tag file for Hazel to deal with.
+    os.system("/bin/bash ./setFileComments.sh '%s'" % (os.path.join("/Volumes/mav/Users/rever/Desktop/",filename_org)))
     sendGrowlNotify("%s" % (filename_org),code="Size: %s" % size,callback_url = nohttps_url,msg_type="Completed")
-    os._exit(0)
+    os._exit(0) # Notified and exited.
 
 except subprocess.CalledProcessError as e:
     print traceback.format_exc()
-    sendGrowlNotify(e,'Not able to catch error, popen failed unique',msg_priority=1)
+    sendGrowlNotify('Not able to catch error, popen failed unique',msg_priority=1)
 
 except Exception, e:
     print traceback.format_exc()
-    sendGrowlNotify(e,"-------------------------- FAILED TO PROCESS -------------------------",msg_priority=1)
+    sendGrowlNotify("-------------------------- FAILED TO PROCESS -------------------------\n %s" % e,msg_priority=1,msg_type="Completed",code="404")
 
-os._exit(1,'Bye, sorry I failed so hard')
+os._exit(1)
