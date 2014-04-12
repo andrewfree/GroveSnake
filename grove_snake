@@ -26,7 +26,8 @@ def spawnDaemon():
         sys.exit(1)
 
     # Run code in forked enviroment... 
-    os.system("/Users/rever/Documents/customBashExecute/child")
+    #os.system("/Users/rever/Documents/Code/GitHub/GroveSnake/grove_child")
+    os.system("/Volumes/mav/Users/rever/Documents/Code/GitHub/GroveSnake/grove_child")
     # Finished.
     os._exit(os.EX_OK)
 spawnDaemon()
