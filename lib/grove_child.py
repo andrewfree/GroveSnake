@@ -37,13 +37,13 @@ def readable_size_format(num):
 
 def main():
     try:
-        env = os.environ
+        env = os.environ #os.environ.copy()
         env["PATH"] = "/sbin:/sbin:/usr/local/bin:/opt/local/bin:/opt/local/libexec/gnubin:/Users/rever/Documents/customBashExecute/:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/MacGPG2/bin:/Users/rever/.rvm/bin" #env["SHELL"] = '/bin/zsh'
         growl = growlInit()
         clipboard_link = ""
         project_dir = ""
         meta_tagged = False
-        processed = False
+        # processed = False
         
         clipboard_process = subprocess.Popen("pbpaste", stdout=subprocess.PIPE)
         clipboard_link, err = clipboard_process.communicate()
@@ -60,11 +60,10 @@ def main():
         os.chdir(os.path.join(project_dir,"tracks")) # Change into tracks folder for downloading.
         
         # Start download, max quality, safe filenames for handling below. The ID is in the filename so you can do metadata lookups for more info if wanted. Rips to mp3, might want to support native download formats, transcoding again and again lowers quality. 
-        output = subprocess.Popen(["/usr/local/bin/youtube-dl", "-o", "%(title)s-%(id)s.%(ext)s","--add-metadata", "-f","22/18/17", "--audio-format","mp3","--audio-quality", "0","-x",clipboard_link], stdout=subprocess.PIPE).communicate()[0] # stderr=subprocess.STDOUT,stdout=subprocess.PIPE
+        output = subprocess.Popen(["/usr/local/bin/youtube-dl", "-o", "%(title)s-%(id)s.%(ext)s","--add-metadata", "-f","22/18/download", "--audio-format","mp3","--audio-quality", "0","-x",clipboard_link], stdout=subprocess.PIPE).communicate()[0] # stderr=subprocess.STDOUT,stdout=subprocess.PIPE
         
         # Search if metadata already added.
         for item in output.split("\n"): # Iterate youtube-dl output line by line (after it finished running)
-            print item
             if (("JSON" in item) and ("soundcloud" in item)): # Search of soundcloud pulled data with song title-artist to be tagged by youtube-dl.
                 print "Found song metadata"
                 meta_tagged = True
@@ -128,5 +127,6 @@ def main():
     except Exception, e: 
         sendGrowlNotify(growl,"FAILED | %s" % e,msg_priority=1,msg_type="Completed",code="404")
         os._exit(1)
+        
 if __name__ == "__main__":
     main()
