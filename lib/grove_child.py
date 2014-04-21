@@ -2,6 +2,7 @@
 # Docs https://github.com/kfdm/gntp/blob/master/docs/index.rst
 # import urllib2, httplib, json # Can get json metadata on youtube videos w/ http://gdata.youtube.com/feeds/api/videos/_7gcIbopIPk?v=2&alt=json
 # import soundcloud,client = soundcloud.Client(client_id='*',client_secret='*',username='*',password='*')
+# TO DO: Edge cases in title names like https://www.youtube.com/watch?v=iPLiLzt0ATo
 import subprocess 
 import os
 import traceback
@@ -60,7 +61,7 @@ def main():
         os.chdir(os.path.join(project_dir,"tracks")) # Change into tracks folder for downloading.
         
         # Start download, max quality, safe filenames for handling below. The ID is in the filename so you can do metadata lookups for more info if wanted. Rips to mp3, might want to support native download formats, transcoding again and again lowers quality. 
-        output = subprocess.Popen(["/usr/local/bin/youtube-dl", "-o", "%(title)s-%(id)s.%(ext)s","--add-metadata", "-f","22/18/download", "--audio-format","mp3","--audio-quality", "0","-x",clipboard_link], stdout=subprocess.PIPE).communicate()[0] # stderr=subprocess.STDOUT,stdout=subprocess.PIPE
+        output = subprocess.Popen(["/usr/local/bin/youtube-dl", "-o", "%(title)s-%(id)s.%(ext)s","--add-metadata", "-f","22/18/download/http_mp3_128_url", "--audio-format","mp3","--audio-quality", "0","-x",clipboard_link], stdout=subprocess.PIPE).communicate()[0] # stderr=subprocess.STDOUT,stdout=subprocess.PIPE
         
         # Search if metadata already added.
         for item in output.split("\n"): # Iterate youtube-dl output line by line (after it finished running)
