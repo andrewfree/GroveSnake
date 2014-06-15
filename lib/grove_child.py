@@ -64,7 +64,7 @@ def main():
         os.chdir(os.path.join(project_dir,"tracks")) # Change into tracks folder for downloading.
         
         # Start download, max quality, safe filenames for handling below. The ID is in the filename so you can do metadata lookups for more info if wanted. Rips to mp3, might want to support native download formats, transcoding again and again lowers quality. 
-        output = subprocess.Popen(["/usr/local/bin/youtube-dl", "-o", "%(title)s-%(id)s.%(ext)s","--add-metadata", "-f","22/18/download/http_mp3_128_url","--restrict-filenames","--audio-format","mp3","--audio-quality", "0","-x",clipboard_link], stdout=subprocess.PIPE).communicate()[0] # stderr=subprocess.STDOUT,stdout=subprocess.PIPE
+        output = subprocess.Popen(["/usr/local/bin/youtube-dl", "-o", "%(title)s|id|%(id)s.%(ext)s","--add-metadata", "-f","22/18/download/http_mp3_128_url","--restrict-filenames","--audio-format","mp3","--audio-quality", "0","-x",clipboard_link], stdout=subprocess.PIPE).communicate()[0] # stderr=subprocess.STDOUT,stdout=subprocess.PIPE
         
         # Get files in tracks folder.
         file_list = os.listdir(os.getcwd())
@@ -88,7 +88,7 @@ def main():
         file_path = music_file[0]
         no_https_url = string.join(clipboard_link.split("/")[2:],"/") # Remove httpS out of url. Something about this url breaks OS X and metadata for finder items. 
         readable_size = readable_size_format(os.path.getsize(file_path))
-        music_file_id = music_file[1].split("-")[-1].split(".")[0] # Split filename and look at very end for song id since scheme has id.mp3
+        music_file_id = music_file[1].split("|id|")[-1].split(".")[0] # Split filename and look at very end for song id since scheme has id.mp3
     
         if clipboard_provider == "soundcloud":
             url = "http://api.soundcloud.com/tracks/%s.json?client_id=key" % music_file_id
