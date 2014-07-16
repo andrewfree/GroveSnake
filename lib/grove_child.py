@@ -9,6 +9,7 @@ import string
 import gntp.notifier
 import urllib2
 import simplejson
+import yaml
 
 def growlInit():
     growl = gntp.notifier.GrowlNotifier(
@@ -37,6 +38,9 @@ def readable_size_format(num):
 
 def main():
     try:
+        with open('../settings.yaml', 'r') as f:
+            settings = yaml.load(f)
+
         env = os.environ #os.environ.copy()
         env["PATH"] = "/sbin:/sbin:/usr/local/bin:/opt/local/bin:/opt/local/libexec/gnubin:/Users/rever/Documents/customBashExecute/:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/MacGPG2/bin:/Users/rever/.rvm/bin" #env["SHELL"] = '/bin/zsh'
         growl = growlInit()
@@ -91,7 +95,7 @@ def main():
         music_file_id = music_file[1].split("|id|")[-1].split(".")[0] # Split filename and look at very end for song id since scheme has id.mp3
     
         if clipboard_provider == "soundcloud":
-            url = "http://api.soundcloud.com/tracks/%s.json?client_id=key" % music_file_id
+            url = "http://api.soundcloud.com/tracks/%s.json?client_id=%s" % (music_file_id,settings["soundcloud_client_id"])
             json = simplejson.load(urllib2.urlopen(url))
             title = json["title"].strip()
             artist = json["user"]['username'].encode('utf8').strip()
@@ -120,7 +124,7 @@ def main():
 
         os.chdir(os.path.join(project_dir,"lib"))
         subprocess.Popen(["/opt/local/bin/bash","setFileComments.sh",file_path],stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        sendGrowlNotify(growl,"%s - %s" % (artist,title),code="%s" % readable_size, callback_url = clipboard_link, msg_type="Completed")
+        sendGrowlNotify(growl,"%s - %s" % (artist.encode('utf8'),title.encode('utf8')),code="%s" % readable_size, callback_url = clipboard_link, msg_type="Completed")
         os._exit(0)
     
     except Exception as e:

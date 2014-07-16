@@ -1,11 +1,13 @@
 GroveSnake
 ==========
 
-Downloads and tags music from youtube and soundcloud (based off clipboard url) at the press of a hotkey.
+Downloads and tags music from youtube and soundcloud (from URL on clipboard).
 
-Bind a system hotkey to the grove_snake script. Mine is
-/Users/rever/Documents/Code/GitHub/GroveSnake/grove_snake
+create a settings.yaml in the root directory with your soundcloud client_id like so
+```
+soundcloud_client_id: cb6a67u320833e5209d4ec765cft859z
+```
 
+Bind a system hotkey to the grove_snake script.
 http://i.imgur.com/nQBE4aC.png
-This is just run within better touch tool as a global hotkey (could do in sys prefrences and services)
-
+This is just run within BetterTouchTool as a global hotkey (You could do something similar in system prefrences -> services)
