@@ -38,9 +38,6 @@ def readable_size_format(num):
 
 def main():
     try:
-        with open('../settings.yaml', 'r') as f:
-            settings = yaml.load(f)
-
         env = os.environ #os.environ.copy()
         env["PATH"] = "/sbin:/sbin:/usr/local/bin:/opt/local/bin:/opt/local/libexec/gnubin:/Users/rever/Documents/customBashExecute/:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/MacGPG2/bin:/Users/rever/.rvm/bin" #env["SHELL"] = '/bin/zsh'
         growl = growlInit()
@@ -65,6 +62,8 @@ def main():
         sendGrowlNotify(growl,"Downloading...")
 
         project_dir = (os.path.join( (os.path.dirname(os.path.realpath(__file__))),'..')) # Project directory, have to go one up out of /lib
+        with open(os.path.join(project_dir,'settings.yaml'), 'r') as f:
+            settings = yaml.load(f)
         os.chdir(os.path.join(project_dir,"tracks")) # Change into tracks folder for downloading.
         
         # Start download, max quality, safe filenames for handling below. The ID is in the filename so you can do metadata lookups for more info if wanted. Rips to mp3, might want to support native download formats, transcoding again and again lowers quality. 
