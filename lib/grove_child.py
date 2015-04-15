@@ -7,7 +7,10 @@ from django.utils.encoding import smart_str, smart_unicode
 import gntp.notifier
 import subprocess, os, traceback, logging
 logging.basicConfig(level=logging.INFO)
-import string,urllib2, simplejson, yaml
+import string,urllib2, simplejson, yaml,urllib
+
+# from Tkinter import *
+# from tkMessageBox import *
 
 def growlInit():
     growl = gntp.notifier.GrowlNotifier(
@@ -49,14 +52,35 @@ def get_link():
     clipboard_link = clipboard_link.split("&")[0] # Remove extra args from url end
     return (clipboard_link,clipboard_provider)
 
+# def answer(choice):
+#     import pdb
+#     pdb.set_trace()
+#     showerror("Answer", "Sorry, no answer available")
+
+# def callback():
+#     if askyesno('Verify', 'Really quit?'):
+#         showwarning('Yes', 'Not yet implemented')
+#     else:
+#         showinfo('No', 'Quit has been cancelled')
+
+
 def get_metadata(clipboard_link,clipboard_provider,m_id,soundcloud_client_id):
     try:
+        artwork = ""
+        tags = ""
         if clipboard_provider == "soundcloud":
             url       = "http://api.soundcloud.com/tracks/%s.json?client_id=%s" % (m_id,soundcloud_client_id)
             json      = simplejson.load(urllib2.urlopen(url))
             title     = json["title"].strip().encode('utf8')
             artist    = json["user"]['username'].encode('utf8').strip()
             track_url = json["permalink_url"]
+            tags      = json['tag_list']
+            # for item in tags.split(' '):
+            #     Button(text=item, command=answer(item)).pack(fill=X)
+            # mainloop()
+            if json.get("artwork_url") != None:
+                artwork   = "-".join(json["artwork_url"].split("-")[0:-1])+"-t300x300.jpg"
+
         elif clipboard_provider == "youtube":
             url       = "http://gdata.youtube.com/feeds/api/videos/%s?alt=json&v=2" % m_id
             json      = simplejson.load(urllib2.urlopen(url))
@@ -67,8 +91,10 @@ def get_metadata(clipboard_link,clipboard_provider,m_id,soundcloud_client_id):
         return False # Wrong id for that provider (so wrong file)
 
     track_url = track_url.split("//")[-1] # Removes http or https part so can match the url better
+    # import pdb
+    # pdb.set_trace()
     if track_url in clipboard_link:
-        return (title,artist)
+        return {"title": title, "artist": artist,"artwork" : artwork, "tags" : tags}
     return False
 
 def main():
@@ -93,6 +119,7 @@ def main():
         song_list = []
         artist    = ""
         title     = ""
+
         for song in file_list:
             if song.split(".")[-1] != "mp3":
                 os.remove(song) # Have to do this until they fix bug in youtube-dl
@@ -101,7 +128,10 @@ def main():
                 song_id = song.split("|")[-1].split(".")[0]
                 data = get_metadata(clipboard_link,clipboard_provider,song_id,settings["soundcloud_client_id"]) # Check if the id of the file found matches up w/ the url that is on the clipboard. Incase there are muitiple files in the output dir.
                 if data:
-                    title,artist = data
+                    title = data['title']
+                    artist = data['artist']
+                    artwork = data.get("artwork")
+                    tags = data.get("tags")
                     song_list.append((os.path.realpath(song),song)) # Fullpath and filename for ease.
                 else:
                     sendGrowlNotify(growl,"Dirty tracks directory. Should only have a single song.")
@@ -134,7 +164,12 @@ def main():
 
         # Writing id3v2 comment tags with song url for lookup later.
         if tagged != True:
-            subprocess.Popen(["/opt/local/bin/eyeD3-2.7", "-t",title, "-a", artist, "-c", no_https_url, music_file[1]],shell=False,stdout=subprocess.PIPE).communicate()
+            if len(artwork) >= 1:
+                image,message = urllib.urlretrieve(artwork)
+                subprocess.Popen(["/opt/local/bin/eyeD3-2.7", "-t",title, "-a", artist, "-c", "%s\n%s" % (no_https_url,tags), "--add-image","%s:FRONT_COVER" % image, music_file[1]],shell=False,stdout=subprocess.PIPE).communicate()
+                os.remove(image)
+            else:
+                subprocess.Popen(["/opt/local/bin/eyeD3-2.7", "-t",title, "-a", artist, "-c", no_https_url, music_file[1]],shell=False,stdout=subprocess.PIPE).communicate()
             # subprocess.Popen(["/opt/local/bin/id3v2", "-t",title, "-a", artist, "-c", no_https_url, music_file[1]],shell=False,stdout=subprocess.PIPE).communicate()
             # subprocess.Popen(["/opt/local/bin/xattr","-s","com.apple.metadata:kMDItemWhereFroms",no_https_url,music_file[1]],stdout=subprocess.PIPE) # For setting the Where From for Spotlight
 
