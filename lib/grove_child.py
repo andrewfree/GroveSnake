@@ -29,7 +29,7 @@ def sendGrowlNotify(growl,message,callback_url="http://youtube.com",code="",msg_
         callback    = callback_url)
 
 def get_clipboard():
-    process = subprocess.Popen("pbpaste", stdout=subprocess.PIPE)
+    process             = subprocess.Popen("pbpaste", stdout=subprocess.PIPE)
     clipboard_link, err = process.communicate()
     # Verify source url (soundcloud/youtube)
     if "youtube" in clipboard_link:
@@ -45,7 +45,7 @@ def get_clipboard():
 def get_metadata(clipboard_link,clipboard_provider,m_id,soundcloud_client_id, youtube_api_key):
     try:
         artwork = ""
-        tags = ""
+        tags    = ""
         if clipboard_provider == "soundcloud":
             url       = "http://api.soundcloud.com/tracks/%s.json?client_id=%s" % (m_id,soundcloud_client_id)
             json      = simplejson.load(urllib2.urlopen(url))
@@ -70,7 +70,7 @@ def get_metadata(clipboard_link,clipboard_provider,m_id,soundcloud_client_id, yo
         # If no dashes in the title use provided artist/poster name from API
         if title.find('-') >= 0:
             artist = title.split('-')[0]
-            title = "-".join(title.split('-')[1::]).strip()
+            title  = "-".join(title.split('-')[1::]).strip()
 
         track_url = track_url.split("//")[-1] # Removes http or https part so can match the url better
         if track_url in clipboard_link:
@@ -90,10 +90,10 @@ def readable_size_format(num):
 def main():
     try:
         # initialize starting varibles & settings
-        os.environ["PATH"] = "/opt/local/bin:/usr/bin/:/bin" # The path for youtube-dl and pbpaste.
-        project_dir = (os.path.join( (os.path.dirname(os.path.realpath(__file__))),'..')) # Root project dir, have to go out of /lib where the code is run fro.
+        os.environ["PATH"]                 = "/opt/local/bin:/usr/bin/:/bin" # The path for youtube-dl and pbpaste.
+        project_dir                        = (os.path.join( (os.path.dirname(os.path.realpath(__file__))),'..')) # Root project dir, have to go out of /lib where the code is run fro.
         clipboard_link, clipboard_provider = get_clipboard() # Grabs link from pbpaste
-        unique_id = str(time.time()).split(".")[0]
+        unique_id                          = str(time.time()).split(".")[0]
 
         with open(os.path.join(project_dir,'settings.yaml'), 'r') as f: # load API keys from settings
             settings = yaml.load(f)
@@ -117,12 +117,12 @@ def main():
                 continue
             elif unique_id in song:
                 song_id = song.split("|")[-1].split(".")[0]
-                data = get_metadata(clipboard_link,clipboard_provider,song_id,settings["soundcloud_client_id"],settings['youtube_api_key']) # Check if the id of the file found matches up w/ the url that is on the clipboard. Incase there are muitiple files in the output dir.
+                data    = get_metadata(clipboard_link,clipboard_provider,song_id,settings["soundcloud_client_id"],settings['youtube_api_key']) # Check if the id of the file found matches up w/ the url that is on the clipboard. Incase there are muitiple files in the output dir.
                 if data:
-                    title = data['title']
-                    artist = data['artist']
-                    artwork = data.get("artwork")
-                    tags = data.get("tags")
+                    title           = data['title']
+                    artist          = data['artist']
+                    artwork         = data.get("artwork")
+                    tags            = data.get("tags")
                     downloaded_file = (song,os.path.realpath(song)) # Fullpath and filename for ease.
             else:
                 if (x == len(file_list)): # There is not a track in the directory with a matching id from what is on the clipboar.
