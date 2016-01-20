@@ -91,6 +91,7 @@ def main():
     try:
         # initialize starting varibles & settings
         os.environ["PATH"]                 = "/opt/local/bin:/usr/bin/:/bin" # The path for youtube-dl and pbpaste.
+        os.environ["LC_CTYPE"] = 'en_US.UTF-8' # If don't explicity set eyeD3 detects as latin-1
         project_dir                        = (os.path.join( (os.path.dirname(os.path.realpath(__file__))),'..')) # Root project dir, have to go out of /lib where the code is run fro.
         clipboard_link, clipboard_provider = get_clipboard() # Grabs link from pbpaste
         unique_id                          = str(time.time()).split(".")[0]
@@ -103,7 +104,8 @@ def main():
         sendGrowlNotify(growl,"Downloading...", callback_url = clipboard_link)
 
         # Start download, max quality, safe filenames for handling below. The ID is in the filename so you can do metadata lookups for more info if wanted. Rips to mp3, might want to support native source formats, transcoding again (to mp3) and again lowers quality.
-        output = subprocess.Popen(["/opt/local/bin/youtube-dl", "-o", "%(title)s|"+unique_id+"|%(id)s.%(ext)s" ,"--add-metadata", "-f","22/18/download/http_mp3_128_url","--restrict-filenames","--audio-format","mp3","--audio-quality", "0","-x",clipboard_link], stdout=subprocess.PIPE).communicate()[0] # stderr=subprocess.STDOUT,stdout=subprocess.PIPE
+        output = subprocess.Popen(["/opt/local/Library/Frameworks/Python.framework/Versions/2.7/bin//youtube-dl", "-o", "%(title)s|"+unique_id+"|%(id)s.%(ext)s" ,"--add-metadata", "-f","22/18/download/http_mp3_128_url","--restrict-filenames","--audio-format","mp3","--audio-quality", "0","-x",clipboard_link], stdout=subprocess.PIPE).communicate()[0] # stderr=subprocess.STDOUT,stdout=subprocess.PIPE
+        # if HTTP Error 403: Forbidden run youtube-dl --rm-cache-dir
 
         # List files in tracks folder.
         file_list = os.listdir(os.getcwd())
@@ -141,11 +143,15 @@ def main():
 
         # Writing id3v2 comment tags with song url for lookup later.
         if len(artwork) >= 1:
+
             image,message = urllib.urlretrieve(artwork)
-            subprocess.Popen(["/opt/local/bin/eyeD3-2.7", "-t",title, "-a", artist, "-c", "%s\n%s" % (no_https_url,tags), "--add-image","%s:FRONT_COVER" % image, music_file[1]],shell=False,stdout=subprocess.PIPE).communicate()
+            subprocess.Popen(["/opt/local/bin/eyeD3-2.7", "-t",title, "-a", artist, "-c", "%s\n%s" % (no_https_url,tags), "--add-image","%s:FRONT_COVER" % image, music_file],shell=False,stdout=subprocess.PIPE).communicate()
             os.remove(image)
         else:
-            subprocess.Popen(["/opt/local/bin/eyeD3-2.7", "-t",title, "-a", artist, "-c", no_https_url, music_file],shell=False,stdout=subprocess.PIPE).communicate()
+            output,err = subprocess.Popen(["/opt/local/bin/eyeD3-2.7", "-t",title, "-a", artist, "-c", "%s\n%s" % (no_https_url,tags), music_file],shell=False,stderr=subprocess.STDOUT,stdout=subprocess.PIPE).communicate()
+            # sendGrowlNotify(growl,': %s / %s' % (output,err) )
+            # sendGrowlNotify(growl, os.environ["LC_CTYPE"])
+
             # subprocess.Popen(["/opt/local/bin/id3v2", "-t",title, "-a", artist, "-c", no_https_url, music_file[1]],shell=False,stdout=subprocess.PIPE).communicate() # Different (old) way to set tags)
             # subprocess.Popen(["/opt/local/bin/xattr","-s","com.apple.metadata:kMDItemWhereFroms",no_https_url,music_file[1]],stdout=subprocess.PIPE) # For setting the Where From for Spotlight
 

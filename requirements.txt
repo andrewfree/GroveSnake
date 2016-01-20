@@ -1,6 +1,7 @@
 Django==1.8.1
 gntp==1.0.2
 PyYAML==3.11
+pymongo==
 simplejson==3.6.5
 --allow-all-external eyed3
 --allow-unverified eyed3
