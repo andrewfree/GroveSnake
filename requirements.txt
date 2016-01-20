@@ -3,6 +3,7 @@ gntp==1.0.2
 PyYAML==3.11
 pymongo==
 simplejson==3.6.5
---allow-all-external eyed3
---allow-unverified eyed3
-eyeD3==0.7.5
+--allow-all-external eyeD3
+--allow-unverified eyeD3
+eyeD3==0.7.9
+youtube-dl
