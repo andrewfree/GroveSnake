@@ -90,7 +90,10 @@ def readable_size_format(num):
 def main():
     try:
         # initialize starting varibles & settings
-        os.environ["PATH"]                 = "/opt/local/bin:/usr/bin/:/bin" # The path for youtube-dl and pbpaste.
+        # export whole path into this varible.
+        shell_paths = subprocess.Popen(["echo $PATH"],shell=True,stdout=subprocess.PIPE)
+        paths = shell_paths.communicate()[0]
+        os.environ["PATH"]                 = paths # The path for youtube-dl and pbpaste.
         os.environ["LC_CTYPE"] = 'en_US.UTF-8' # If don't explicity set eyeD3 detects as latin-1
         project_dir                        = (os.path.join( (os.path.dirname(os.path.realpath(__file__))),'..')) # Root project dir, have to go out of /lib where the code is run fro.
         clipboard_link, clipboard_provider = get_clipboard() # Grabs link from pbpaste
@@ -98,13 +101,24 @@ def main():
 
         with open(os.path.join(project_dir,'settings.yaml'), 'r') as f: # load API keys from settings
             settings = yaml.load(f)
+
+       # Check for tracks and or create.
+        if os.path.isdir("./tracks") != True:
+            os.makedirs("./tracks")
         os.chdir(os.path.join(project_dir,"tracks")) # Enter tracks folder for downloading.
 
         # Notify start
         sendGrowlNotify(growl,"Downloading...", callback_url = clipboard_link)
 
+       # Which yotuubel-dl path
+        which_youtube = subprocess.Popen(["which youtube-dl"],shell=True,stdout=subprocess.PIPE)
+        path_youtube = which_youtube.communicate()[0].strip()
+        if len(path_youtube) == 0:
+            print("Youtube-dl can not be found.")
+            os._exit(0)
+
         # Start download, max quality, safe filenames for handling below. The ID is in the filename so you can do metadata lookups for more info if wanted. Rips to mp3, might want to support native source formats, transcoding again (to mp3) and again lowers quality.
-        output = subprocess.Popen(["/opt/local/Library/Frameworks/Python.framework/Versions/2.7/bin//youtube-dl", "-o", "%(title)s|"+unique_id+"|%(id)s.%(ext)s" ,"--add-metadata", "-f","22/18/download/http_mp3_128_url","--restrict-filenames","--audio-format","mp3","--audio-quality", "0","-x",clipboard_link], stdout=subprocess.PIPE).communicate()[0] # stderr=subprocess.STDOUT,stdout=subprocess.PIPE
+        output = subprocess.Popen([path_youtube, "-o", "%(title)s|"+unique_id+"|%(id)s.%(ext)s" ,"--add-metadata", "-f","22/18/download/http_mp3_128_url","--restrict-filenames","--audio-format","mp3","--audio-quality", "0","-x",clipboard_link], stdout=subprocess.PIPE).communicate()[0] # stderr=subprocess.STDOUT,stdout=subprocess.PIPE
         # if HTTP Error 403: Forbidden run youtube-dl --rm-cache-dir
 
         # List files in tracks folder.
@@ -141,14 +155,21 @@ def main():
         readable_size = readable_size_format(os.path.getsize(file_path)) # Human readble output of filesize for growl
         music_file_id = music_file.split("|id|")[-1].split(".")[0] # Split filename and look at very end for song id since scheme has id.mp3
 
+
+        # Which eyeD3 path
+        which_eyed3 = subprocess.Popen(["which eyeD3"],shell=True,stdout=subprocess.PIPE)
+        path_eyed3 = which_eyed3.communicate()[0].strip()
+        if len(path_eyed3) == 0:
+            print("eyeD3 can not be found.")
+            os._exit(0)
         # Writing id3v2 comment tags with song url for lookup later.
         if len(artwork) >= 1:
 
             image,message = urllib.urlretrieve(artwork)
-            subprocess.Popen(["/opt/local/bin/eyeD3-2.7", "-t",title, "-a", artist, "-c", "%s\n%s" % (no_https_url,tags), "--add-image","%s:FRONT_COVER" % image, music_file],shell=False,stdout=subprocess.PIPE).communicate()
+            subprocess.Popen([path_eyed3, "-t",title, "-a", artist, "-c", "%s\n%s" % (no_https_url,tags), "--add-image","%s:FRONT_COVER" % image, music_file],shell=False,stdout=subprocess.PIPE).communicate()
             os.remove(image)
         else:
-            output,err = subprocess.Popen(["/opt/local/bin/eyeD3-2.7", "-t",title, "-a", artist, "-c", "%s\n%s" % (no_https_url,tags), music_file],shell=False,stderr=subprocess.STDOUT,stdout=subprocess.PIPE).communicate()
+            output,err = subprocess.Popen([path_eyed3, "-t",title, "-a", artist, "-c", "%s\n%s" % (no_https_url,tags), music_file],shell=False,stderr=subprocess.STDOUT,stdout=subprocess.PIPE).communicate()
             # sendGrowlNotify(growl,': %s / %s' % (output,err) )
             # sendGrowlNotify(growl, os.environ["LC_CTYPE"])
 
